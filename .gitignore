@@ -1,0 +1,10 @@
+# Python / Django
+backend/venv/
+backend/**/__pycache__/
+backend/*.pyc
+backend/db.sqlite3
+backend/.env
+
+# General
+.DS_Store
+*.lo
