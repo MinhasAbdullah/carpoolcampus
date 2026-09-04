@@ -73,3 +73,29 @@ class OnTheWayPingView(APIView):
         trip.save()
         # Wajih's real-time notification trigger would fire here
         return Response({'status': 'ping sent'}, status=status.HTTP_200_OK)
+
+class UpdateTripStatusView(APIView):
+    """Driver or rider can update trip status: scheduled -> in_progress -> completed (or cancelled)"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, trip_id):
+        try:
+            trip = Trip.objects.get(id=trip_id)
+        except Trip.DoesNotExist:
+            return Response({'error': 'Trip not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Confirm the requester is either the driver or rider on this trip
+        user = request.user
+        is_driver = trip.match.driver_route.user == user
+        is_rider = trip.match.rider_route.user == user
+        if not (is_driver or is_rider):
+            return Response({'error': 'Not authorized for this trip'}, status=status.HTTP_403_FORBIDDEN)
+
+        new_status = request.data.get('status')
+        valid_statuses = [choice[0] for choice in Trip.Status.choices]
+        if new_status not in valid_statuses:
+            return Response({'error': f'Invalid status. Must be one of {valid_statuses}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        trip.status = new_status
+        trip.save()
+        return Response(TripSerializer(trip).data, status=status.HTTP_200_OK)
